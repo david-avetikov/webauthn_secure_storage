@@ -6,6 +6,7 @@
 A robust Flutter plugin providing cross-platform encrypted secure storage and standards-based WebAuthn/Passkey capabilities.
 
 This package combines two essential security concepts into one seamless API:
+
 1. **Biometric-gated secure storage**: Securely store small secrets (like authentication tokens or encryption keys) backed by hardware encryption and gated by platform biometrics (Face ID, Touch ID, Android Keystore).
 2. **Passkeys / WebAuthn**: Full support for server-driven Passkey registration and authentication flows, matching W3C standards using native platform APIs.
 
@@ -13,9 +14,10 @@ This package combines two essential security concepts into one seamless API:
 
 - **Store Secrets Securely**: Use hardware-backed encryption (Apple Keychain, Android Keystore, Windows Credential Manager, Linux Secret Service).
 - **Biometric Authentication**: Optionally require user verification (Fingerprint, Face ID) before reading or writing data.
-- **Passkeys Support**: Native implementation of Passkey flows across Android, iOS, macOS, Windows, and Web.
+- **Passkeys Support**: Native implementation of Passkey flows across Android, iOS, macOS, Windows, Linux, and Web.
 - **WebAuthn PRF**: Leverage WebAuthn PRF on the web to securely store secrets when traditional secure storage isn't enough.
 - **Granular Capability Checks**: Distinguish between whether a feature is supported on the hardware vs available right now (e.g. clamshell mode on macOS).
+- **Desktop Native Integrations**: Uses Windows Hello / `webauthn.dll` on Windows and `libsecret` + `fprintd` + `libfido2` on Linux instead of a faux cross-platform shim.
 
 ## Supported Platforms
 
@@ -24,9 +26,11 @@ This package combines two essential security concepts into one seamless API:
 | **Android** | ✅ `KeyStore` | ✅ | ✅ |
 | **iOS** | ✅ `KeyChain` | ✅ | ✅ |
 | **macOS** | ✅ `KeyChain` | ✅ | ✅ |
-| **Windows** | ✅ `Credential Manager` | ❌ (planned) | ✅ |
-| **Linux** | ✅ `libsecret` | ❌ (planned) | ❌ (planned) |
+| **Windows** | ✅ `Credential Manager` | ❌ | ✅ `Windows Hello / WebAuthn` |
+| **Linux** | ✅ `libsecret` | ✅ `fprintd`* | ✅ `libfido2`* |
 | **Web** | ✅ `WebAuthn PRF` | ✅ | ✅ |
+
+\* Linux biometric-gated storage requires `fprintd`, an enrolled fingerprint, and compatible hardware. Linux passkeys require `libfido2` plus a supported authenticator.
 
 ---
 
@@ -54,7 +58,8 @@ class MainActivity: FlutterFragmentActivity() {
 }
 ```
 
-3. Use an AppCompat-based launch theme. In `android/app/src/main/res/values/styles.xml`:
+1. Use an AppCompat-based launch theme. In `android/app/src/main/res/values/styles.xml`:
+
 ```xml
 <style name="LaunchTheme" parent="Theme.AppCompat.NoActionBar">
     <!-- your theme config -->
@@ -70,7 +75,7 @@ class MainActivity: FlutterFragmentActivity() {
 <string>Use Face ID / Touch ID to securely authenticate and access secrets.</string>
 ```
 
-2. For **macOS Sandboxed apps**, ensure you add the Keychain access group to your `.entitlements` files (both Debug and Release):
+1. For **macOS Sandboxed apps**, ensure you add the Keychain access group to your `.entitlements` files (both Debug and Release):
 
 ```xml
 <key>com.apple.security.app-sandbox</key>
@@ -81,7 +86,8 @@ class MainActivity: FlutterFragmentActivity() {
 </array>
 ```
 
-3. For Passkeys support on Apple platforms, you must configure **Associated Domains**. Add the following to your entitlements and configure your `apple-app-site-association` file on your server.
+1. For Passkeys support on Apple platforms, you must configure **Associated Domains**. Add the following to your entitlements and configure your `apple-app-site-association` file on your server.
+
 ```xml
 <key>com.apple.developer.associated-domains</key>
 <array>
@@ -91,12 +97,16 @@ class MainActivity: FlutterFragmentActivity() {
 
 ### Windows & Linux
 
-- **Windows**: No additional setup required out of the box. Uses the Data Protection API (DPAPI) and Windows Credential Manager.
-- **Linux**: Requires `libsecret` to be installed on the host system. For Snap-packaged applications, you may need to connect the password-manager interface: `snap connect <your-snap-name>:password-manager-service`.
+- **Windows**: No additional setup required out of the box. Secure storage uses DPAPI plus Windows Credential Manager, and passkeys use the native Windows Hello / WebAuthn APIs exposed by `webauthn.dll`.
+- **Linux**: Secure storage requires a Secret Service implementation such as GNOME Keyring via `libsecret`.
+- **Linux biometrics**: Biometric-gated storage requires `fprintd`, an enrolled fingerprint, and a supported reader.
+- **Linux passkeys**: Native passkey registration/authentication requires `libfido2` and a supported authenticator. On Debian/Ubuntu build agents this is typically `libfido2-dev`.
+- **Linux packaging**: For Snap-packaged applications, you may need to connect the password-manager interface: `snap connect <your-snap-name>:password-manager-service`.
 
 ### Web
 
 To use Passkeys and PRF-backed storage on the web, you must:
+
 1. Serve your application from a secure context (`https://` or `localhost`).
 2. Ensure your WebAuthn relying-party configuration matches your deployment origin.
 
@@ -205,7 +215,9 @@ final assertion = await biometricStorage.authenticateWithPasskey(requestOptions)
 ```
 
 ## Contributing
+
 See the repository for full contribution guidelines, federated architecture details, and issue tracking.
 
 ## Acknowledgements
+
 Thank you to the original `biometric_storage` package for the initial inspiration and many of the code concepts.

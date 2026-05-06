@@ -14,9 +14,10 @@ This package combines two essential security concepts into one seamless API:
 
 - **Store Secrets Securely**: Use hardware-backed encryption (Apple Keychain, Android Keystore, Windows Credential Manager, Linux Secret Service).
 - **Biometric Authentication**: Optionally require user verification (Fingerprint, Face ID) before reading or writing data.
-- **Passkeys Support**: Native implementation of Passkey flows across Android, iOS, macOS, Windows, and Web.
+- **Passkeys Support**: Native implementation of Passkey flows across Android, iOS, macOS, Windows, Linux, and Web.
 - **WebAuthn PRF**: Leverage WebAuthn PRF on the web to securely store secrets when traditional secure storage isn't enough.
 - **Granular Capability Checks**: Distinguish between whether a feature is supported on the hardware vs available right now (e.g. clamshell mode on macOS).
+- **Desktop Native Integrations**: Uses Windows Hello / `webauthn.dll` on Windows and `libsecret` + `fprintd` + `libfido2` on Linux instead of a faux cross-platform shim.
 
 ## Supported Platforms
 
@@ -25,9 +26,11 @@ This package combines two essential security concepts into one seamless API:
 | **Android** | ✅ `KeyStore` | ✅ | ✅ |
 | **iOS** | ✅ `KeyChain` | ✅ | ✅ |
 | **macOS** | ✅ `KeyChain` | ✅ | ✅ |
-| **Windows** | ✅ `Credential Manager` | ❌ (planned) | ✅ |
-| **Linux** | ✅ `libsecret` | ❌ (planned) | ❌ (planned) |
+| **Windows** | ✅ `Credential Manager` | ❌ | ✅ `Windows Hello / WebAuthn` |
+| **Linux** | ✅ `libsecret` | ✅ `fprintd`* | ✅ `libfido2`* |
 | **Web** | ✅ `WebAuthn PRF` | ✅ | ✅ |
+
+\* Linux biometric-gated storage requires `fprintd`, an enrolled fingerprint, and compatible hardware. Linux passkeys require `libfido2` plus a supported authenticator.
 
 ---
 
@@ -94,8 +97,11 @@ class MainActivity: FlutterFragmentActivity() {
 
 ### Windows & Linux
 
-- **Windows**: No additional setup required out of the box. Uses the Data Protection API (DPAPI) and Windows Credential Manager.
-- **Linux**: Requires `libsecret` to be installed on the host system. For Snap-packaged applications, you may need to connect the password-manager interface: `snap connect <your-snap-name>:password-manager-service`.
+- **Windows**: No additional setup required out of the box. Secure storage uses DPAPI plus Windows Credential Manager, and passkeys use the native Windows Hello / WebAuthn APIs exposed by `webauthn.dll`.
+- **Linux**: Secure storage requires a Secret Service implementation such as GNOME Keyring via `libsecret`.
+- **Linux biometrics**: Biometric-gated storage requires `fprintd`, an enrolled fingerprint, and a supported reader.
+- **Linux passkeys**: Native passkey registration/authentication requires `libfido2` and a supported authenticator. On Debian/Ubuntu build agents this is typically `libfido2-dev`.
+- **Linux packaging**: For Snap-packaged applications, you may need to connect the password-manager interface: `snap connect <your-snap-name>:password-manager-service`.
 
 ### Web
 

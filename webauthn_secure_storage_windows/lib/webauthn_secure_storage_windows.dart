@@ -108,6 +108,10 @@ class BiometricStorageWindows extends BiometricStoragePlatform {
     PublicKeyCredentialRequestOptionsJson options,
   ) async => PasskeyWindows.authenticateWithPasskey(options);
 
+  @override
+  Future<PasskeyAvailability> getPasskeyAvailability() async =>
+      PasskeyWindows.getAvailability();
+
   String _storageName(String name, {bool legacy = false}) =>
       '${legacy ? legacyNamePrefix : namePrefix}$name';
 
@@ -171,7 +175,7 @@ class BiometricStorageWindows extends BiometricStoragePlatform {
   @override
   Future<CanAuthenticateResponse> canAuthenticate({
     StorageFileInitOptions? options,
-  }) async => CanAuthenticateResponse.errorHwUnavailable;
+  }) async => PasskeyWindows.getCanAuthenticateResponse();
 
   @override
   Future<bool?> init(

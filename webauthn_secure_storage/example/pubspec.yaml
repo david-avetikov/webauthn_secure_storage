@@ -1,7 +1,7 @@
 name: webauthn_secure_storage_example
 description: Demonstrates how to use the webauthn_secure_storage plugin.
 publish_to: 'none'
-version: 0.1.0
+version: 0.2.0
 
 resolution: workspace
 
@@ -10,7 +10,7 @@ environment:
   flutter: ">=3.41.0"
 
 dependencies:
-  webauthn_secure_storage: ^0.1.0
+  webauthn_secure_storage: ^0.2.0
   flutter:
     sdk: flutter
   logging: ^1.2.0

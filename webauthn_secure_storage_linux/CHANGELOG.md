@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0
+## 0.2.0
 
 - Rebrand the federated plugin family from `biometric_storage` to
   `webauthn_secure_storage` across packages, folders, imports, docs, and
