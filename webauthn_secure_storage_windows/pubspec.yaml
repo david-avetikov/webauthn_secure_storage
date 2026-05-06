@@ -1,6 +1,6 @@
 name: webauthn_secure_storage_windows
 description: Windows implementation of the webauthn_secure_storage federated plugin.
-version: 0.2.0
+version: 0.2.1
 homepage: https://github.com/JohnGalt1717/webauthn_secure_storage
 
 resolution: workspace
@@ -26,4 +26,5 @@ flutter:
     implements: webauthn_secure_storage
     platforms:
       windows:
+        pluginClass: WebauthnSecureStorageWindowsPlugin
         dartPluginClass: BiometricStorageWindows

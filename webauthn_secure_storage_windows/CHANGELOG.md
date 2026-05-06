@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.1
+
+- Prompt Windows Hello before each protected secure-storage read, write, delete,
+  and existence check while keeping Windows Credential Manager as the storage
+  backend.
+- Add a native Windows consent bridge so biometric-gated storage availability
+  reflects Windows Hello readiness instead of passkey authenticator support.
+- Extend Windows package tests to cover storage initialization, prompt
+  enforcement, and Windows Hello error mapping.
+
 ## 0.2.0
 
 - Rebrand the federated plugin family from `biometric_storage` to

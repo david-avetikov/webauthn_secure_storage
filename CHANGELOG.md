@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.1
+
+- Enable true Windows Hello gating for protected Windows secure-storage access
+  while continuing to persist secrets in Windows Credential Manager.
+- Add a native Windows consent bridge so Windows biometric-storage capability
+  checks report Windows Hello readiness instead of passkey support.
+- Update documentation and tests to reflect authenticated Windows storage
+  reads, writes, deletes, and existence checks.
+
 ## 0.2.0
 
 - Rebrand the federated plugin family from `biometric_storage` to

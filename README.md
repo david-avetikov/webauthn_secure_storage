@@ -26,7 +26,7 @@ This package combines two essential security concepts into one seamless API:
 | **Android** | ✅ `KeyStore` | ✅ | ✅ |
 | **iOS** | ✅ `KeyChain` | ✅ | ✅ |
 | **macOS** | ✅ `KeyChain` | ✅ | ✅ |
-| **Windows** | ✅ `Credential Manager` | ❌ | ✅ `Windows Hello / WebAuthn` |
+| **Windows** | ✅ `Credential Manager` | ✅ `Windows Hello` | ✅ `Windows Hello / WebAuthn` |
 | **Linux** | ✅ `libsecret` | ✅ `fprintd`* | ✅ `libfido2`* |
 | **Web** | ✅ `WebAuthn PRF` | ✅ | ✅ |
 
@@ -97,7 +97,7 @@ class MainActivity: FlutterFragmentActivity() {
 
 ### Windows & Linux
 
-- **Windows**: No additional setup required out of the box. Secure storage uses DPAPI plus Windows Credential Manager, and passkeys use the native Windows Hello / WebAuthn APIs exposed by `webauthn.dll`.
+- **Windows**: No additional setup required out of the box. Secure storage uses DPAPI plus Windows Credential Manager, authenticated storage prompts Windows Hello before each protected read/write/delete/exists operation, and passkeys use the native Windows Hello / WebAuthn APIs exposed by `webauthn.dll`.
 - **Linux**: Secure storage requires a Secret Service implementation such as GNOME Keyring via `libsecret`.
 - **Linux biometrics**: Biometric-gated storage requires `fprintd`, an enrolled fingerprint, and a supported reader.
 - **Linux passkeys**: Native passkey registration/authentication requires `libfido2` and a supported authenticator. On Debian/Ubuntu build agents this is typically `libfido2-dev`.

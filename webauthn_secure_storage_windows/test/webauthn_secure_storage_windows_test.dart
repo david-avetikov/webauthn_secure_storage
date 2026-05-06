@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:webauthn_secure_storage_windows/webauthn_secure_storage_windows.dart';
 import 'package:webauthn_secure_storage_windows/src/passkey_windows.dart';
+import 'package:webauthn_secure_storage_windows/src/windows_credential_store.dart';
+import 'package:webauthn_secure_storage_windows/src/windows_user_consent.dart';
 import 'package:webauthn_secure_storage_windows/src/windows_webauthn_bindings.dart';
 import 'package:webauthn_secure_storage_platform_interface/webauthn_secure_storage_platform_interface.dart';
 
@@ -51,11 +53,21 @@ class _FakeWindowsWebAuthnBindings implements WindowsWebAuthnBindings {
 }
 
 void main() {
-  group('BiometricStorageWindows Passkeys', () {
+  group('BiometricStorageWindows', () {
     late BiometricStorageWindows plugin;
+    late _FakeWindowsCredentialStore credentialStore;
+    late _FakeWindowsUserConsentClient userConsentClient;
 
     setUp(() {
-      plugin = BiometricStorageWindows();
+      credentialStore = _FakeWindowsCredentialStore();
+      userConsentClient = _FakeWindowsUserConsentClient(
+        availability: WindowsUserConsentAvailability.available,
+        verificationResult: WindowsUserConsentVerificationResult.verified,
+      );
+      plugin = BiometricStorageWindows(
+        credentialStore: credentialStore,
+        userConsentClient: userConsentClient,
+      );
       PasskeyWindows.bindingsFactory = () => _FakeWindowsWebAuthnBindings(
         apiVersion: 1,
         availability: const WindowsPlatformAuthenticatorAvailability(
@@ -70,9 +82,24 @@ void main() {
     });
 
     test(
-      'canAuthenticate maps available platform authenticator to success',
+      'canAuthenticate maps available Windows Hello consent to success',
       () async {
         expect(await plugin.canAuthenticate(), CanAuthenticateResponse.success);
+      },
+    );
+
+    test(
+      'canAuthenticate succeeds when authentication is not required',
+      () async {
+        userConsentClient.availability =
+            WindowsUserConsentAvailability.deviceNotPresent;
+
+        expect(
+          await plugin.canAuthenticate(
+            options: StorageFileInitOptions(authenticationRequired: false),
+          ),
+          CanAuthenticateResponse.success,
+        );
       },
     );
 
@@ -90,15 +117,10 @@ void main() {
     );
 
     test(
-      'canAuthenticate maps missing platform authenticator to no hardware',
+      'canAuthenticate maps missing Windows Hello support to no hardware',
       () async {
-        PasskeyWindows.bindingsFactory = () => _FakeWindowsWebAuthnBindings(
-          apiVersion: 1,
-          availability: const WindowsPlatformAuthenticatorAvailability(
-            hResult: 0,
-            isAvailable: false,
-          ),
-        );
+        userConsentClient.availability =
+            WindowsUserConsentAvailability.deviceNotPresent;
 
         expect(
           await plugin.canAuthenticate(),
@@ -108,15 +130,10 @@ void main() {
     );
 
     test(
-      'canAuthenticate maps failed native availability call to hw unavailable',
+      'canAuthenticate maps policy-disabled Windows Hello to hw unavailable',
       () async {
-        PasskeyWindows.bindingsFactory = () => _FakeWindowsWebAuthnBindings(
-          apiVersion: 1,
-          availability: const WindowsPlatformAuthenticatorAvailability(
-            hResult: -1,
-            isAvailable: false,
-          ),
-        );
+        userConsentClient.availability =
+            WindowsUserConsentAvailability.disabledByPolicy;
 
         expect(
           await plugin.canAuthenticate(),
@@ -222,7 +239,147 @@ void main() {
         );
       },
     );
+
+    test('read/write/delete require Windows Hello when configured', () async {
+      await plugin.init(
+        'secret',
+        options: StorageFileInitOptions(authenticationRequired: true),
+      );
+
+      await plugin.write('secret', 'value', PromptInfo.defaultValues);
+      expect(await plugin.read('secret', PromptInfo.defaultValues), 'value');
+      expect(await plugin.exists('secret', PromptInfo.defaultValues), isTrue);
+      expect(await plugin.delete('secret', PromptInfo.defaultValues), isTrue);
+
+      expect(userConsentClient.verificationReasons, <String>[
+        'Use Windows Hello to save protected data.',
+        'Use Windows Hello to access protected data.',
+        'Use Windows Hello to access protected data.',
+        'Use Windows Hello to delete protected data.',
+      ]);
+    });
+
+    test('unauthenticated storage skips Hello prompts by default', () async {
+      await plugin.init(
+        'secret',
+        options: StorageFileInitOptions(authenticationRequired: false),
+      );
+
+      await plugin.write('secret', 'value', PromptInfo.defaultValues);
+      expect(await plugin.read('secret', PromptInfo.defaultValues), 'value');
+
+      expect(userConsentClient.verificationReasons, isEmpty);
+    });
+
+    test(
+      'forceBiometricAuthentication prompts even without enforced auth',
+      () async {
+        await plugin.init(
+          'secret',
+          options: StorageFileInitOptions(authenticationRequired: false),
+        );
+
+        await plugin.write(
+          'secret',
+          'value',
+          PromptInfo.defaultValues,
+          forceBiometricAuthentication: true,
+        );
+        await plugin.read(
+          'secret',
+          PromptInfo.defaultValues,
+          forceBiometricAuthentication: true,
+        );
+
+        expect(userConsentClient.verificationReasons, <String>[
+          'Use Windows Hello to save protected data.',
+          'Use Windows Hello to access protected data.',
+        ]);
+      },
+    );
+
+    test('canceled verification maps to an auth exception', () async {
+      await plugin.init(
+        'secret',
+        options: StorageFileInitOptions(authenticationRequired: true),
+      );
+      userConsentClient.verificationResult =
+          WindowsUserConsentVerificationResult.canceled;
+
+      await expectLater(
+        plugin.read('secret', PromptInfo.defaultValues),
+        throwsA(isA<AuthException>()),
+      );
+    });
+
+    test(
+      'delete clears both namespaces so deleted legacy value does not resurface',
+      () async {
+        await plugin.init(
+          'secret',
+          options: StorageFileInitOptions(authenticationRequired: false),
+        );
+
+        // Seed the legacy namespace via the credential store's write API,
+        // using the prefixed key that the plugin uses internally.
+        await credentialStore.write(
+          '${BiometricStorageWindows.legacyNamePrefix}secret',
+          'legacy-value',
+        );
+        // Write via the current API so both namespaces are populated.
+        await plugin.write('secret', 'new-value', PromptInfo.defaultValues);
+
+        // After delete the credential must not be retrievable from either
+        // namespace – the legacy entry must not resurface.
+        expect(await plugin.delete('secret', PromptInfo.defaultValues), isTrue);
+        expect(await plugin.read('secret', PromptInfo.defaultValues), isNull);
+        expect(
+          await plugin.exists('secret', PromptInfo.defaultValues),
+          isFalse,
+        );
+      },
+    );
   });
+}
+
+class _FakeWindowsCredentialStore implements WindowsCredentialStore {
+  final Map<String, String> _values = <String, String>{};
+
+  @override
+  Future<bool> delete(String storageName, String logicalName) async =>
+      _values.remove(storageName) != null;
+
+  @override
+  Future<String?> read(String storageName, String logicalName) async =>
+      _values[storageName];
+
+  @override
+  Future<void> write(String storageName, String content) async {
+    _values[storageName] = content;
+  }
+}
+
+class _FakeWindowsUserConsentClient implements WindowsUserConsentClient {
+  _FakeWindowsUserConsentClient({
+    required this.availability,
+    required this.verificationResult,
+  });
+
+  WindowsUserConsentAvailability availability;
+  WindowsUserConsentVerificationResult verificationResult;
+  final List<String> verificationReasons = <String>[];
+
+  @override
+  Future<WindowsUserConsentAvailability> getAvailability() async =>
+      availability;
+
+  @override
+  Future<WindowsUserConsentVerificationResult> requestVerification({
+    required String reason,
+  }) async {
+    verificationReasons.add(reason);
+    return verificationResult;
+  }
 }
 
 class _ThrowingWindowsBindings extends _FakeWindowsWebAuthnBindings {

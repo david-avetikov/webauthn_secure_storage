@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.1
+
+- Enable true Windows Hello gating for protected Windows secure-storage access
+  while continuing to persist secrets in Windows Credential Manager.
+- Update Windows platform support documentation to reflect authenticated
+  storage reads, writes, and deletes on desktop.
+
 ## 0.2.0
 
 - Rebrand the federated plugin family from `biometric_storage` to

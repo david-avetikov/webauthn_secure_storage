@@ -2,27 +2,270 @@ name: Dart CI
 
 on:
   push:
+    branches:
+      - main
   pull_request:
 
 permissions:
   contents: read
+  pull-requests: read
+
+concurrency:
+  group: dart-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect impacted jobs
+    runs-on: ubuntu-latest
+    outputs:
+      analyze_matrix: ${{ steps.matrices.outputs.analyze_matrix }}
+      test_matrix: ${{ steps.matrices.outputs.test_matrix }}
+      build_matrix: ${{ steps.matrices.outputs.build_matrix }}
+      run_test_web: ${{ steps.matrices.outputs.run_test_web }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            ci:
+              - '.github/workflows/**'
+              - 'analysis_options.yaml'
+            platform_interface:
+              - 'webauthn_secure_storage_platform_interface/**'
+            android:
+              - 'webauthn_secure_storage_android/**'
+            darwin:
+              - 'webauthn_secure_storage_darwin/**'
+            linux:
+              - 'webauthn_secure_storage_linux/**'
+            web:
+              - 'webauthn_secure_storage_web/**'
+            windows:
+              - 'webauthn_secure_storage_windows/**'
+            package:
+              - 'webauthn_secure_storage/lib/**'
+              - 'webauthn_secure_storage/src/**'
+              - 'webauthn_secure_storage/test/**'
+              - 'webauthn_secure_storage/pubspec.yaml'
+              - 'webauthn_secure_storage/analysis_options.yaml'
+            example:
+              - 'webauthn_secure_storage/example/**'
+
+      - id: matrices
+        uses: actions/github-script@v7
+        env:
+          CI_CHANGED: ${{ steps.filter.outputs.ci }}
+          PLATFORM_INTERFACE_CHANGED: ${{ steps.filter.outputs.platform_interface }}
+          ANDROID_CHANGED: ${{ steps.filter.outputs.android }}
+          DARWIN_CHANGED: ${{ steps.filter.outputs.darwin }}
+          LINUX_CHANGED: ${{ steps.filter.outputs.linux }}
+          WEB_CHANGED: ${{ steps.filter.outputs.web }}
+          WINDOWS_CHANGED: ${{ steps.filter.outputs.windows }}
+          PACKAGE_CHANGED: ${{ steps.filter.outputs.package }}
+          EXAMPLE_CHANGED: ${{ steps.filter.outputs.example }}
+        with:
+          script: |
+            const asBool = (name) => process.env[name] === 'true';
+
+            const flags = {
+              ci: asBool('CI_CHANGED'),
+              platformInterface: asBool('PLATFORM_INTERFACE_CHANGED'),
+              android: asBool('ANDROID_CHANGED'),
+              darwin: asBool('DARWIN_CHANGED'),
+              linux: asBool('LINUX_CHANGED'),
+              web: asBool('WEB_CHANGED'),
+              windows: asBool('WINDOWS_CHANGED'),
+              package: asBool('PACKAGE_CHANGED'),
+              example: asBool('EXAMPLE_CHANGED'),
+            };
+
+            const runAll = flags.ci;
+            const analyze = [];
+            const test = [];
+            const builds = [];
+
+            const addPackage = (target, collection, shouldRun) => {
+              if (shouldRun) {
+                collection.push(target);
+              }
+            };
+
+            const addBuild = (target, shouldRun) => {
+              if (shouldRun) {
+                builds.push(target);
+              }
+            };
+
+            addPackage(
+              'webauthn_secure_storage_platform_interface',
+              analyze,
+              runAll || flags.platformInterface,
+            );
+            addPackage(
+              'webauthn_secure_storage_android',
+              analyze,
+              runAll || flags.android || flags.platformInterface,
+            );
+            addPackage(
+              'webauthn_secure_storage_darwin',
+              analyze,
+              runAll || flags.darwin || flags.platformInterface,
+            );
+            addPackage(
+              'webauthn_secure_storage_linux',
+              analyze,
+              runAll || flags.linux || flags.platformInterface,
+            );
+            addPackage(
+              'webauthn_secure_storage_web',
+              analyze,
+              runAll || flags.web || flags.platformInterface,
+            );
+            addPackage(
+              'webauthn_secure_storage_windows',
+              analyze,
+              runAll || flags.windows || flags.platformInterface,
+            );
+            addPackage(
+              'webauthn_secure_storage',
+              analyze,
+              runAll || flags.package || flags.platformInterface,
+            );
+            addPackage(
+              'webauthn_secure_storage/example',
+              analyze,
+              runAll || flags.example || flags.package || flags.platformInterface,
+            );
+
+            addPackage(
+              'webauthn_secure_storage_platform_interface',
+              test,
+              runAll || flags.platformInterface,
+            );
+            addPackage(
+              'webauthn_secure_storage_android',
+              test,
+              runAll || flags.android || flags.platformInterface,
+            );
+            addPackage(
+              'webauthn_secure_storage_darwin',
+              test,
+              runAll || flags.darwin || flags.platformInterface,
+            );
+            addPackage(
+              'webauthn_secure_storage_linux',
+              test,
+              runAll || flags.linux || flags.platformInterface,
+            );
+            addPackage(
+              'webauthn_secure_storage_windows',
+              test,
+              runAll || flags.windows || flags.platformInterface,
+            );
+            addPackage(
+              'webauthn_secure_storage',
+              test,
+              runAll || flags.package || flags.platformInterface,
+            );
+            addPackage(
+              'webauthn_secure_storage/example',
+              test,
+              runAll || flags.example || flags.package || flags.platformInterface,
+            );
+
+            addBuild(
+              {
+                os: 'ubuntu-latest',
+                buildcommand: 'linux',
+                enable: 'linux-desktop',
+                buildargs: '',
+                setup_java: false,
+              },
+              runAll ||
+                flags.example ||
+                flags.package ||
+                flags.platformInterface ||
+                flags.linux,
+            );
+            addBuild(
+              {
+                os: 'ubuntu-latest',
+                buildcommand: 'web',
+                enable: 'web',
+                buildargs: '',
+                setup_java: false,
+              },
+              runAll ||
+                flags.example ||
+                flags.package ||
+                flags.platformInterface ||
+                flags.web,
+            );
+            addBuild(
+              {
+                os: 'ubuntu-latest',
+                buildcommand: 'appbundle',
+                enable: '',
+                buildargs: '',
+                setup_java: true,
+              },
+              runAll ||
+                flags.example ||
+                flags.package ||
+                flags.platformInterface ||
+                flags.android,
+            );
+            addBuild(
+              {
+                os: 'windows-latest',
+                buildcommand: 'windows',
+                enable: '',
+                buildargs: '',
+                setup_java: false,
+              },
+              runAll ||
+                flags.example ||
+                flags.package ||
+                flags.platformInterface ||
+                flags.windows,
+            );
+            addBuild(
+              {
+                os: 'macos-latest',
+                buildcommand: 'ios',
+                enable: '',
+                buildargs: '--no-codesign',
+                setup_java: false,
+              },
+              runAll ||
+                flags.example ||
+                flags.package ||
+                flags.platformInterface ||
+                flags.darwin,
+            );
+
+            const runTestWeb = runAll || flags.web || flags.platformInterface;
+
+            core.setOutput('analyze_matrix', JSON.stringify(analyze));
+            core.setOutput('test_matrix', JSON.stringify(test));
+            core.setOutput('build_matrix', JSON.stringify(builds));
+            core.setOutput('run_test_web', String(runTestWeb));
+
   analyze:
+    needs: changes
+    if: ${{ needs.changes.outputs.analyze_matrix != '[]' }}
     name: Analyze ${{ matrix.package }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        package:
-          - webauthn_secure_storage_platform_interface
-          - webauthn_secure_storage_android
-          - webauthn_secure_storage_darwin
-          - webauthn_secure_storage_linux
-          - webauthn_secure_storage_web
-          - webauthn_secure_storage_windows
-          - webauthn_secure_storage
-          - webauthn_secure_storage/example
+        package: ${{ fromJson(needs.changes.outputs.analyze_matrix) }}
 
     defaults:
       run:
@@ -43,19 +286,14 @@ jobs:
         run: flutter analyze
 
   test:
+    needs: changes
+    if: ${{ needs.changes.outputs.test_matrix != '[]' }}
     name: Test ${{ matrix.package }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        package:
-          - webauthn_secure_storage_platform_interface
-          - webauthn_secure_storage_android
-          - webauthn_secure_storage_darwin
-          - webauthn_secure_storage_linux
-          - webauthn_secure_storage_windows
-          - webauthn_secure_storage
-          - webauthn_secure_storage/example
+        package: ${{ fromJson(needs.changes.outputs.test_matrix) }}
 
     defaults:
       run:
@@ -76,6 +314,8 @@ jobs:
         run: if [ -d "test" ]; then flutter test; else echo "No tests to run for ${{ matrix.package }}."; fi
 
   test-web:
+    needs: changes
+    if: ${{ needs.changes.outputs.run_test_web == 'true' }}
     name: Test webauthn_secure_storage_web
     runs-on: ubuntu-latest
     defaults:
@@ -105,37 +345,14 @@ jobs:
         run: flutter test --platform chrome
 
   build-example:
+    needs: changes
+    if: ${{ needs.changes.outputs.build_matrix != '[]' }}
     name: Build example (${{ matrix.buildcommand }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-latest
-            buildcommand: linux
-            enable: linux-desktop
-            buildargs: ''
-            setup_java: false
-          - os: ubuntu-latest
-            buildcommand: web
-            enable: web
-            buildargs: ''
-            setup_java: false
-          - os: ubuntu-latest
-            buildcommand: appbundle
-            enable: ''
-            buildargs: ''
-            setup_java: true
-          - os: windows-latest
-            buildcommand: windows
-            enable: ''
-            buildargs: ''
-            setup_java: false
-          - os: macos-latest
-            buildcommand: ios
-            enable: ''
-            buildargs: --no-codesign
-            setup_java: false
+        include: ${{ fromJson(needs.changes.outputs.build_matrix) }}
 
     defaults:
       run:
