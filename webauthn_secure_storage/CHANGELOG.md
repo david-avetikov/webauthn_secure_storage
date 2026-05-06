@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.2
+
+- Clarify the package documentation so authenticated Windows secure-storage
+  operations explicitly include deletes and existence checks.
+
 ## 0.2.1
 
 - Enable true Windows Hello gating for protected Windows secure-storage access

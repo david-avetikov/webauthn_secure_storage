@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.2
+
+- Refresh GitHub Actions dependencies to current Node 24-compatible major
+  versions to stay ahead of the hosted-runner JavaScript runtime migration.
+- Clarify the Windows secure-storage documentation so authenticated operations
+  explicitly include deletes and existence checks, matching current behavior.
+
 ## 0.2.1
 
 - Enable true Windows Hello gating for protected Windows secure-storage access

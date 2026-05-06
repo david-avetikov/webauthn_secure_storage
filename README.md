@@ -13,7 +13,7 @@ This package combines two essential security concepts into one seamless API:
 ## Features
 
 - **Store Secrets Securely**: Use hardware-backed encryption (Apple Keychain, Android Keystore, Windows Credential Manager, Linux Secret Service).
-- **Biometric Authentication**: Optionally require user verification (Fingerprint, Face ID) before reading or writing data.
+- **Biometric Authentication**: Optionally require user verification (Fingerprint, Face ID, Windows Hello) before protected storage reads, writes, deletes, or existence checks.
 - **Passkeys Support**: Native implementation of Passkey flows across Android, iOS, macOS, Windows, Linux, and Web.
 - **WebAuthn PRF**: Leverage WebAuthn PRF on the web to securely store secrets when traditional secure storage isn't enough.
 - **Granular Capability Checks**: Distinguish between whether a feature is supported on the hardware vs available right now (e.g. clamshell mode on macOS).
