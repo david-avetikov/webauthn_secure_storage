@@ -18,6 +18,15 @@ private extension String {
     }
 }
 
+extension Data {
+    func base64UrlEncodedString() -> String {
+        base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .trimmingCharacters(in: CharacterSet(charactersIn: "="))
+    }
+}
+
 @available(macOS 12.0, *)
 class PasskeyImplementation: NSObject, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
 
@@ -98,25 +107,25 @@ class PasskeyImplementation: NSObject, ASAuthorizationControllerDelegate, ASAuth
     func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
         if let credential = authorization.credential as? ASAuthorizationPlatformPublicKeyCredentialRegistration {
             let response: [String: Any] = [
-                "id": credential.credentialID.base64EncodedString(),
-                "rawId": credential.credentialID.base64EncodedString(),
+                "id": credential.credentialID.base64UrlEncodedString(),
+                "rawId": credential.credentialID.base64UrlEncodedString(),
                 "type": "public-key",
                 "response": [
-                    "clientDataJSON": credential.rawClientDataJSON.base64EncodedString(),
-                    "attestationObject": credential.rawAttestationObject?.base64EncodedString() ?? "",
+                    "clientDataJSON": credential.rawClientDataJSON.base64UrlEncodedString(),
+                    "attestationObject": credential.rawAttestationObject?.base64UrlEncodedString() ?? "",
                 ],
             ]
             result?(response)
         } else if let credential = authorization.credential as? ASAuthorizationPlatformPublicKeyCredentialAssertion {
             let response: [String: Any] = [
-                "id": credential.credentialID.base64EncodedString(),
-                "rawId": credential.credentialID.base64EncodedString(),
+                "id": credential.credentialID.base64UrlEncodedString(),
+                "rawId": credential.credentialID.base64UrlEncodedString(),
                 "type": "public-key",
                 "response": [
-                    "clientDataJSON": credential.rawClientDataJSON.base64EncodedString(),
-                    "authenticatorData": credential.rawAuthenticatorData.base64EncodedString(),
-                    "signature": credential.signature.base64EncodedString(),
-                    "userHandle": credential.userID?.base64EncodedString() ?? "",
+                    "clientDataJSON": credential.rawClientDataJSON.base64UrlEncodedString(),
+                    "authenticatorData": credential.rawAuthenticatorData.base64UrlEncodedString(),
+                    "signature": credential.signature.base64UrlEncodedString(),
+                    "userHandle": credential.userID?.base64UrlEncodedString() ?? "",
                 ],
             ]
             result?(response)
