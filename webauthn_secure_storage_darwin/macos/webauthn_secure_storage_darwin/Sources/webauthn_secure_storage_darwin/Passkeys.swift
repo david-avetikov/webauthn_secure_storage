@@ -23,6 +23,27 @@ class PasskeyImplementation: NSObject, ASAuthorizationControllerDelegate, ASAuth
 
     private var result: ((Any?) -> Void)?
 
+    private func passkeyFlutterError(code: String, message: String) -> FlutterError {
+        FlutterError(code: code, message: message, details: nil)
+    }
+
+    private func passkeyFlutterError(from error: Error) -> FlutterError {
+        let nsError = error as NSError
+        let code: String
+        if nsError.domain == ASAuthorizationError.errorDomain,
+           nsError.code == ASAuthorizationError.canceled.rawValue {
+            code = "AuthError:UserCanceled"
+        } else {
+            code = "AuthError:Canceled"
+        }
+        return passkeyFlutterError(code: code, message: error.localizedDescription)
+    }
+
+    private func complete(_ value: Any?) {
+        result?(value)
+        result = nil
+    }
+
     func registerPasskey(options: [String: Any], result: @escaping (Any?) -> Void) {
         self.result = result
         guard let challengeString = options["challenge"] as? String,
@@ -33,7 +54,10 @@ class PasskeyImplementation: NSObject, ASAuthorizationControllerDelegate, ASAuth
               let userIdString = userItem["id"] as? String,
               let userId = userIdString.base64UrlDecodedData(),
               let userName = userItem["name"] as? String else {
-            result(NSError(domain: "webauthn_secure_storage", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid options: challenge, rp.id, user.id, and user.name are required"]))
+            complete(passkeyFlutterError(
+                code: "InvalidArguments",
+                message: "Invalid options: challenge, rp.id, user.id, and user.name are required"
+            ))
             return
         }
 
@@ -51,7 +75,10 @@ class PasskeyImplementation: NSObject, ASAuthorizationControllerDelegate, ASAuth
         guard let challengeString = options["challenge"] as? String,
               let challengeData = challengeString.base64UrlDecodedData(),
               let rpId = options["rpId"] as? String else {
-            result(NSError(domain: "webauthn_secure_storage", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid options: challenge and rpId are required"]))
+            complete(passkeyFlutterError(
+                code: "InvalidArguments",
+                message: "Invalid options: challenge and rpId are required"
+            ))
             return
         }
 
@@ -94,11 +121,11 @@ class PasskeyImplementation: NSObject, ASAuthorizationControllerDelegate, ASAuth
             ]
             result?(response)
         } else {
-            result?(NSError(domain: "webauthn_secure_storage", code: 2, userInfo: [NSLocalizedDescriptionKey: "Unknown credential"]))
+            complete(passkeyFlutterError(code: "SecurityError", message: "Unknown credential"))
         }
     }
 
     func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
-        result?(error)
+        complete(passkeyFlutterError(from: error))
     }
 }
