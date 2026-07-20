@@ -8,6 +8,11 @@ const webAuthnUnsupportedMessage =
     'If the browser cannot prove that capability at runtime, web support is '
     'reported as unsupported instead of falling back to weaker storage.';
 
+const webAuthnStubRuntimeMessage =
+    'webauthn_secure_storage web runtime is not linked for this compilation '
+    'target. Ensure the app is built for Flutter Web (dart.library.ui_web) '
+    'and not using the unsupported stub implementation.';
+
 abstract class WebAuthnRuntime {
   Future<WebAuthnSupport> probeSupport();
 
@@ -19,15 +24,9 @@ abstract class WebAuthnRuntime {
 
   Uint8List randomBytes(int length);
 
-  Future<Uint8List> encrypt({
-    required Uint8List keyBytes,
-    required Uint8List plaintext,
-  });
+  Future<Uint8List> encrypt({required Uint8List keyBytes, required Uint8List plaintext});
 
-  Future<Uint8List> decrypt({
-    required Uint8List keyBytes,
-    required Uint8List ciphertext,
-  });
+  Future<Uint8List> decrypt({required Uint8List keyBytes, required Uint8List ciphertext});
 
   Future<Uint8List> registerCredential({
     required String storageName,
@@ -36,13 +35,9 @@ abstract class WebAuthnRuntime {
     required Uint8List prfSalt,
   });
 
-  Future<PublicKeyCredentialAttestationJson> registerPasskey(
-    PublicKeyCredentialCreationOptionsJson options,
-  );
+  Future<PublicKeyCredentialAttestationJson> registerPasskey(PublicKeyCredentialCreationOptionsJson options);
 
-  Future<PublicKeyCredentialAssertionJson> authenticateWithPasskey(
-    PublicKeyCredentialRequestOptionsJson options,
-  );
+  Future<PublicKeyCredentialAssertionJson> authenticateWithPasskey(PublicKeyCredentialRequestOptionsJson options);
 
   Future<Uint8List> derivePrfSecret({
     required Uint8List credentialId,
@@ -72,8 +67,7 @@ class WebAuthnSupport {
   final bool hasPlatformAuthenticator;
   final bool hasConditionalUi;
 
-  bool get isPasskeySupported =>
-      isSecureContext && hasCredentialsApi && hasPublicKeyCredential;
+  bool get isPasskeySupported => isSecureContext && hasCredentialsApi && hasPublicKeyCredential;
 
   bool get isStorageSupported => isPasskeySupported && supportsPrf;
 }

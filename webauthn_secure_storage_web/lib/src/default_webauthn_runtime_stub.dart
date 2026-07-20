@@ -9,12 +9,12 @@ WebAuthnRuntime createDefaultWebAuthnRuntime() => _UnsupportedWebAuthnRuntime();
 class _UnsupportedWebAuthnRuntime implements WebAuthnRuntime {
   @override
   Future<WebAuthnSupport> probeSupport() async => const WebAuthnSupport(
-        isSecureContext: false,
-        hasCredentialsApi: false,
-        hasPublicKeyCredential: false,
-        supportsPrf: false,
-        hasPlatformAuthenticator: false,
-      );
+    isSecureContext: false,
+    hasCredentialsApi: false,
+    hasPublicKeyCredential: false,
+    supportsPrf: false,
+    hasPlatformAuthenticator: false,
+  );
 
   @override
   String? readRecord(String key) => null;
@@ -29,19 +29,13 @@ class _UnsupportedWebAuthnRuntime implements WebAuthnRuntime {
   Uint8List randomBytes(int length) => Uint8List(length);
 
   @override
-  Future<Uint8List> encrypt({
-    required Uint8List keyBytes,
-    required Uint8List plaintext,
-  }) async {
-    throw UnsupportedError(webAuthnUnsupportedMessage);
+  Future<Uint8List> encrypt({required Uint8List keyBytes, required Uint8List plaintext}) async {
+    throw UnsupportedError(webAuthnStubRuntimeMessage);
   }
 
   @override
-  Future<Uint8List> decrypt({
-    required Uint8List keyBytes,
-    required Uint8List ciphertext,
-  }) async {
-    throw UnsupportedError(webAuthnUnsupportedMessage);
+  Future<Uint8List> decrypt({required Uint8List keyBytes, required Uint8List ciphertext}) async {
+    throw UnsupportedError(webAuthnStubRuntimeMessage);
   }
 
   @override
@@ -51,21 +45,19 @@ class _UnsupportedWebAuthnRuntime implements WebAuthnRuntime {
     required Uint8List userId,
     required Uint8List prfSalt,
   }) async {
-    throw UnsupportedError(webAuthnUnsupportedMessage);
+    throw UnsupportedError(webAuthnStubRuntimeMessage);
   }
 
   @override
-  Future<PublicKeyCredentialAttestationJson> registerPasskey(
-    PublicKeyCredentialCreationOptionsJson options,
-  ) async {
-    throw UnsupportedError(webAuthnUnsupportedMessage);
+  Future<PublicKeyCredentialAttestationJson> registerPasskey(PublicKeyCredentialCreationOptionsJson options) async {
+    throw UnsupportedError(webAuthnStubRuntimeMessage);
   }
 
   @override
   Future<PublicKeyCredentialAssertionJson> authenticateWithPasskey(
     PublicKeyCredentialRequestOptionsJson options,
   ) async {
-    throw UnsupportedError(webAuthnUnsupportedMessage);
+    throw UnsupportedError(webAuthnStubRuntimeMessage);
   }
 
   @override
@@ -74,7 +66,7 @@ class _UnsupportedWebAuthnRuntime implements WebAuthnRuntime {
     required Uint8List prfSalt,
     required bool forceBiometricAuthentication,
   }) async {
-    throw UnsupportedError(webAuthnUnsupportedMessage);
+    throw UnsupportedError(webAuthnStubRuntimeMessage);
   }
 
   @override

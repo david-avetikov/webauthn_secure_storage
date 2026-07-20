@@ -1,6 +1,4 @@
+import 'default_webauthn_runtime_stub.dart' if (dart.library.ui_web) 'default_webauthn_runtime_web.dart' as impl;
 import 'webauthn_runtime.dart';
-import 'default_webauthn_runtime_stub.dart'
-    if (dart.library.html) 'default_webauthn_runtime_web.dart' as impl;
 
-WebAuthnRuntime createDefaultWebAuthnRuntime() =>
-    impl.createDefaultWebAuthnRuntime();
+WebAuthnRuntime createDefaultWebAuthnRuntime() => impl.createDefaultWebAuthnRuntime();
